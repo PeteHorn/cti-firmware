@@ -37,7 +37,7 @@ if (EXISTS ${picoVscode})
     include(${picoVscode})
 endif()
 # ====================================================================================
-set(PICO_BOARD pico_w CACHE STRING "Board type")
+set(PICO_BOARD pico CACHE STRING "Board type")
 
 message("\n-- Including Pico SDK from ${PICO_SDK_PATH} --")
 
@@ -82,3 +82,13 @@ target_compile_definitions(${VISA_TARGET}
 )
 configure_rp2040(${VISA_TARGET})
 message("CTI-Visa output will be ${VISA_OUTPUT}.uf2")
+
+add_custom_command(TARGET ${VISA_TARGET} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory
+        ${PROJECT_SOURCE_DIR}/uf2
+    COMMAND ${CMAKE_COMMAND} -E copy
+        ${PROJECT_BINARY_DIR}/${VISA_OUTPUT}.uf2
+        ${PROJECT_SOURCE_DIR}/uf2/${VISA_OUTPUT}.uf2
+    DEPENDS ${PROJECT_BINARY_DIR}/${VISA_OUTPUT}.uf2
+    COMMENT "Copying built firmware file to uf2 folder."
+)

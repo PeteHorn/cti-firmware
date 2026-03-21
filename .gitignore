@@ -33,3 +33,4 @@
 /platform/rp2040/build
 /platform/avr/build
 /build
+/uf2
