@@ -13,6 +13,10 @@
 #define CTI_WIFI_BUFLEN 1024
 #endif
 
+#ifndef CTI_DISABLE_WIFI
+#define CTI_DISABLE_WIFI 0
+#endif
+
 #include <hardware/flash.h>
 #include <hardware/sync.h>
 #include <pico/stdlib.h>
@@ -237,15 +241,20 @@ namespace PicoW {
         if (!_connected) {
             cyw43_arch_enable_sta_mode();
 
+            CTI_DEBUG("Attempting to connect to %s\n", _info.ssid);
+
             int res = cyw43_arch_wifi_connect_timeout_ms(_info.ssid, _info.password, CYW43_AUTH_WPA2_AES_PSK, 20000);
 
             if (res == 0) {
+                CTI_DEBUG("Connected, creating listener.\n");
+
                 if (_server != nullptr) {
                     tcp_close(_server);
                 }
 
                 tcp_pcb* pcb = tcp_new_ip_type(IPADDR_TYPE_V4);
                 if (!pcb) {
+                    CTI_DEBUG("Failed to create protocol control block.\n");
                     cyw43_arch_disable_sta_mode();
                     return false;
                 }
@@ -254,6 +263,7 @@ namespace PicoW {
 
                 err_t err = tcp_bind(pcb, nullptr, 5555);
                 if (err) {
+                    CTI_DEBUG("Failed to bind tcp: %d\n", err);
                     tcp_close(pcb);
                     cyw43_arch_disable_sta_mode();
                     return false;
@@ -261,6 +271,7 @@ namespace PicoW {
 
                 _server = tcp_listen_with_backlog(pcb, 1);
                 if (!_server) {
+                    CTI_DEBUG("Creating listener failed.\n");
                     tcp_close(pcb);
                     return false;
                 }
@@ -268,6 +279,8 @@ namespace PicoW {
                 _server->flags |= TF_NODELAY;
 
                 tcp_accept(_server, wifi_server_accept);
+
+                CTI_DEBUG("WiFi connected successfully.\n");
 
                 return true;
             }
@@ -301,6 +314,7 @@ void CTI::Platform::BoardInit() {
     stdio_set_translate_crlf(&stdio_usb, false);
 
     if (!usb_init) {
+        CTI_DEBUG("USB failed to initialize.\n");
         while (1) {
             status = !status;
             gPlatform.IO.StatusLED(status);
@@ -309,6 +323,7 @@ void CTI::Platform::BoardInit() {
     }
 
     if (wifi_init != 0) {
+        CTI_DEBUG("cyw43 initialization failed.\n");
         gPlatform.IO.StatusLED(true);
         while (1);
     }
@@ -328,8 +343,9 @@ void CTI::Platform::BoardInit() {
 
     gPlatform.IO.RegisterStreams(streams);
 
-    const char* ssid = "SSID";
-    const char* pw = "PASSWORD";
+    #if CTI_DISABLE_WIFI==0
+    const char* ssid = "Protean";
+    const char* pw = "dab5267@rit.edu";
 
     gPlatform.IO.StatusLED(true);
 
@@ -338,6 +354,7 @@ void CTI::Platform::BoardInit() {
     } else {
         gPlatform.IO.Printf("Could not connect to wifi!\n");
     }
+    #endif
 }
 
 CTI::PlatformWifi::PlatformWifi() {

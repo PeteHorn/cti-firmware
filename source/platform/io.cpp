@@ -3,6 +3,10 @@
 #include <string.h>
 #include <stdarg.h>
 
+#ifndef CTI_DISABLE_WIFI
+#define CTI_DISABLE_WIFI 0
+#endif
+
 namespace CTI {
 
     PlatformIO::PlatformIO() {
@@ -16,9 +20,17 @@ namespace CTI {
 
     int PlatformIO::FGetCtimeout(uint32_t timeout_us, bool allStreams) {
         int c;
+
+        #if CTI_DISABLE_WIFI == 1
+        _curStream = 0;
+        #else
+        _curStream = 1;
+        #endif
+
         CTI_DEBUG(" S!:%d", _curStream);
         c = _streams[_curStream]->getchar(timeout_us);
 
+        #if CTI_DISABLE_WIFI == 0
         if (c == -1 && allStreams) {
             //timed out on current stream, check others and update curStream
             for (int i = 0; i < CTI_NUM_STREAMS; ++i) {
@@ -34,6 +46,7 @@ namespace CTI {
         }
 
         CTI_DEBUG(" c:%d '%c'", c, c);
+        #endif
 
         return c;
     }
