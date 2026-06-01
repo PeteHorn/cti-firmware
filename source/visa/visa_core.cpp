@@ -15,6 +15,9 @@ namespace Visa {
 
     using namespace SCPI;
 
+    void __attribute__((weak)) PlatformVisaTick() {}
+    uint32_t __attribute__((weak)) PlatformVisaPollTimeoutUs() { return 20000; }
+
     void initPlatformCommands(Visa* visa);
 
     CommandResult SCPI_Reset(ScpiParser* scpi) {
@@ -184,7 +187,8 @@ namespace Visa {
         char c;
 
         while(true) {
-            val = gPlatform.IO.FGetCtimeout(20000); //20 ms
+            PlatformVisaTick();
+            val = gPlatform.IO.FGetCtimeout(PlatformVisaPollTimeoutUs());
 
             if (val == -1) {
                 gPlatform.IO.StatusLED(false, Comms);
