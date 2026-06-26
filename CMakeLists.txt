@@ -1,23 +1,10 @@
-# == DO NOT EDIT THE FOLLOWING LINES for the Raspberry Pi Pico VS Code Extension to work ==
-if(WIN32)
-    set(USERHOME $ENV{USERPROFILE})
-else()
-    set(USERHOME $ENV{HOME})
-endif()
-set(sdkVersion 2.1.0)
-set(toolchainVersion 13_3_Rel1)
-set(picotoolVersion 2.1.0)
-set(picoVscode ${USERHOME}/.pico-sdk/cmake/pico-vscode.cmake)
-if (EXISTS ${picoVscode})
-    include(${picoVscode})
-endif()
 # ====================================================================================
 # Generated Cmake Pico project file
 
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.28)
 
-set(CMAKE_C_STANDARD 11)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_C_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Initialise pico_sdk from installed location
@@ -37,7 +24,7 @@ if (EXISTS ${picoVscode})
     include(${picoVscode})
 endif()
 # ====================================================================================
-set(PICO_BOARD pico CACHE STRING "Board type")
+set(PICO_BOARD pico_w CACHE STRING "Board type")
 
 message("\n-- Including Pico SDK from ${PICO_SDK_PATH} --")
 
@@ -89,6 +76,5 @@ add_custom_command(TARGET ${VISA_TARGET} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy
         ${PROJECT_BINARY_DIR}/${VISA_OUTPUT}.uf2
         ${PROJECT_SOURCE_DIR}/uf2/${VISA_OUTPUT}.uf2
-    DEPENDS ${PROJECT_BINARY_DIR}/${VISA_OUTPUT}.uf2
     COMMENT "Copying built firmware file to uf2 folder."
 )
