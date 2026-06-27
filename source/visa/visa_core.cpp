@@ -184,13 +184,13 @@ namespace Visa {
         char c;
 
         while(true) {
-            val = gPlatform.IO.FGetCtimeout(20000); //20 ms
+            val = gPlatform.IO.FGetCtimeout(20000); //20 ms, dictates when activity status is cleared
 
             if (val == -1) {
                 gPlatform.IO.StatusLED(false, Comms);
             } else {
                 c = val;
-                gPlatform.IO.StatusLED(true, Comms);
+                //gPlatform.IO.StatusLED(true, Comms);
                 if (!_parser.bufferInput(&c, 1)) {
                     gPlatform.IO.Print("**ERROR: Input Overflow");
 

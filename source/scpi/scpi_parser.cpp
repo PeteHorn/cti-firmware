@@ -46,6 +46,10 @@ namespace SCPI {
 
             _bufSize++;
 
+            //Parse the tree portion separately from the full message so the
+            //buffer can be reset and fully used for any supplied parameters.
+            //This lets the command tree length not eat into available parameter
+            //length.
             if (_state == ParserState::FindCommand ) {
                 if (data[i] == ' ' || data[i] == '?' || data[i] == '\n') {
                     ParserStatus res = parseNode();
