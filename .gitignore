@@ -33,4 +33,6 @@
 /platform/rp2040/build
 /platform/avr/build
 /build
+/build-docker
+/docker-artifacts
 /uf2
