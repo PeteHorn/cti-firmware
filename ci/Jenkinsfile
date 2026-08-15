@@ -1,0 +1,142 @@
+pipeline {
+    agent any
+
+    parameters {
+        string(
+            name: 'BUILD_VERSION',
+            defaultValue: '',
+            description: 'Version folder name to create, for example 1.2.3. Leave blank to use the Jenkins build number.'
+        )
+        string(
+            name: 'DESCRIPTION',
+            defaultValue: 'Automated Jenkins build',
+            description: 'Human-readable description stored with the build metadata.'
+        )
+        string(
+            name: 'WEB_ROOT',
+            defaultValue: '/var/www/html/cti-firmware',
+            description: 'Web root directory served by Apache/Nginx so files can be downloaded in a browser.'
+        )
+        string(
+            name: 'ARTIFACT_SUBDIR',
+            defaultValue: 'releases',
+            description: 'Subdirectory under WEB_ROOT used to store versioned builds.'
+        )
+        string(
+            name: 'DOCKER_IMAGE_NAME',
+            defaultValue: 'cti-firmware-builder',
+            description: 'Docker image tag used by ci/docker_build.sh.'
+        )
+    }
+
+    options {
+        timestamps()
+        ansiColor('xterm')
+        timeout(time: 180, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '20'))
+    }
+
+    stages {
+        stage('Prepare release metadata') {
+            steps {
+                script {
+                    env.BUILD_DATE = sh(
+                        script: 'date -u +"%Y-%m-%dT%H:%M:%SZ"',
+                        returnStdout: true
+                    ).trim()
+
+                    env.RELEASE_BRANCH = (env.BRANCH_NAME ?: env.GIT_BRANCH ?: 'local').replaceAll('/', '_')
+                    env.RELEASE_VERSION = params.BUILD_VERSION?.trim() ? params.BUILD_VERSION.trim() : "0.0.${env.BUILD_NUMBER}"
+                    env.RELEASE_DESCRIPTION = params.DESCRIPTION?.trim() ?: 'No description provided'
+                    env.RELEASE_DIR = "${params.WEB_ROOT.trim()}/${params.ARTIFACT_SUBDIR.trim()}/${env.RELEASE_VERSION}"
+                    env.LATEST_DIR = "${params.WEB_ROOT.trim()}/${params.ARTIFACT_SUBDIR.trim()}/latest"
+                }
+            }
+        }
+
+        stage('Build firmware') {
+            steps {
+                sh '''
+                    set -eux
+
+                    mkdir -p "${WEB_ROOT}"
+                    mkdir -p "${WEB_ROOT}/${ARTIFACT_SUBDIR}"
+
+                    ./ci/docker_build.sh \
+                        --rebuild-image \
+                        --build-dir "${WORKSPACE}/build-docker" \
+                        --artifact-dir "${WORKSPACE}/docker-artifacts" \
+                        --deploy-dir "${RELEASE_DIR}" \
+                        --description "${RELEASE_DESCRIPTION}" \
+                        --version "${RELEASE_VERSION}"
+                '''
+            }
+        }
+
+        stage('Write build metadata') {
+            steps {
+                sh '''
+                    set -eux
+
+                    mkdir -p "${RELEASE_DIR}"
+
+                    cat > "${RELEASE_DIR}/build-info.txt" <<EOF
+Version: ${RELEASE_VERSION}
+Build Date: ${BUILD_DATE}
+Branch: ${RELEASE_BRANCH}
+Build Number: ${BUILD_NUMBER}
+Description:
+${RELEASE_DESCRIPTION}
+EOF
+
+                    cat > "${RELEASE_DIR}/build-info.json" <<EOF
+{
+  "version": "${RELEASE_VERSION}",
+  "buildDate": "${BUILD_DATE}",
+  "branch": "${RELEASE_BRANCH}",
+  "buildNumber": "${BUILD_NUMBER}",
+  "description": "${RELEASE_DESCRIPTION}"
+}
+EOF
+
+                    cat > "${RELEASE_DIR}/index.html" <<EOF
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>CTI Firmware ${RELEASE_VERSION}</title>
+  </head>
+  <body>
+    <h1>CTI Firmware Build</h1>
+    <ul>
+      <li><strong>Version:</strong> ${RELEASE_VERSION}</li>
+      <li><strong>Build Date:</strong> ${BUILD_DATE}</li>
+      <li><strong>Branch:</strong> ${RELEASE_BRANCH}</li>
+      <li><strong>Build Number:</strong> ${BUILD_NUMBER}</li>
+      <li><strong>Description:</strong> ${RELEASE_DESCRIPTION}</li>
+    </ul>
+    <p>Download the artifacts from this directory.</p>
+  </body>
+</html>
+EOF
+
+                    ln -sfn "${RELEASE_VERSION}" "${LATEST_DIR}"
+                '''
+            }
+        }
+    }
+
+    post {
+        always {
+            archiveArtifacts(
+                allowEmptyArchive: true,
+                artifacts: '**/*.uf2,**/*.bin,**/*.hex,**/*.elf,**/*.zip,**/build-info.txt,**/build-info.json',
+                fingerprint: true
+            )
+        }
+        success {
+            echo "Artifacts published to ${env.RELEASE_DIR}"
+            echo "Browser URL: http://<your-jenkins-host-or-web-server>/<ARTIFACT_SUBDIR>/${env.RELEASE_VERSION}"
+        }
+    }
+}
