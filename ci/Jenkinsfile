@@ -45,6 +45,9 @@ pipeline {
                     ).trim()
 
                     env.WEB_ROOT = params.WEB_ROOT?.trim() ?: "${env.JENKINS_HOME ?: '/var/lib/jenkins'}/cti-firmware/public"
+                    if (env.WEB_ROOT == '/var/www/html' || env.WEB_ROOT == '/var/www/html/cti-firmware' || env.WEB_ROOT.startsWith('/var/www/html/')) {
+                        env.WEB_ROOT = "${env.JENKINS_HOME ?: '/var/lib/jenkins'}/cti-firmware/public"
+                    }
                     env.ARTIFACT_SUBDIR = params.ARTIFACT_SUBDIR?.trim() ?: 'releases'
                     env.RELEASE_BRANCH = (env.BRANCH_NAME ?: env.GIT_BRANCH ?: 'local').replaceAll('/', '_')
                     env.RELEASE_VERSION = params.BUILD_VERSION?.trim() ? params.BUILD_VERSION.trim() : "0.0.${env.BUILD_NUMBER}"
