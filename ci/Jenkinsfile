@@ -66,6 +66,13 @@ pipeline {
                     mkdir -p "$WEB_ROOT"
                     mkdir -p "$WEB_ROOT/$ARTIFACT_SUBDIR"
 
+                    if [ ! -f ./ci/docker_build.sh ]; then
+                        echo "Missing build script: ./ci/docker_build.sh" >&2
+                        exit 1
+                    fi
+
+                    chmod +x ./ci/docker_build.sh
+
                     ./ci/docker_build.sh \
                         --rebuild-image \
                         --build-dir "$WORKSPACE/build-docker" \
