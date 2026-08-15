@@ -14,8 +14,8 @@ pipeline {
         )
         string(
             name: 'WEB_ROOT',
-            defaultValue: '/var/www/html/cti-firmware',
-            description: 'Web root directory served by Apache/Nginx so files can be downloaded in a browser.'
+            defaultValue: '/var/lib/jenkins/cti-firmware/public',
+            description: 'Directory where versioned release folders are published. This must be writable by the Jenkins user and visible via your web server.'
         )
         string(
             name: 'ARTIFACT_SUBDIR',
@@ -44,7 +44,7 @@ pipeline {
                         returnStdout: true
                     ).trim()
 
-                    env.WEB_ROOT = params.WEB_ROOT?.trim() ?: '/var/www/html/cti-firmware'
+                    env.WEB_ROOT = params.WEB_ROOT?.trim() ?: "${env.JENKINS_HOME ?: '/var/lib/jenkins'}/cti-firmware/public"
                     env.ARTIFACT_SUBDIR = params.ARTIFACT_SUBDIR?.trim() ?: 'releases'
                     env.RELEASE_BRANCH = (env.BRANCH_NAME ?: env.GIT_BRANCH ?: 'local').replaceAll('/', '_')
                     env.RELEASE_VERSION = params.BUILD_VERSION?.trim() ? params.BUILD_VERSION.trim() : "0.0.${env.BUILD_NUMBER}"
@@ -137,7 +137,8 @@ EOF
         }
         success {
             echo "Artifacts published to ${env.RELEASE_DIR}"
-            echo "Browser URL: http://<your-jenkins-host-or-web-server>/<ARTIFACT_SUBDIR>/${env.RELEASE_VERSION}"
+            echo "If you want this served by Apache/Nginx, make sure your web root points at ${env.WEB_ROOT} or mount that directory into your web server."
+            echo "Browser URL: http://<your-web-server>/<ARTIFACT_SUBDIR>/${env.RELEASE_VERSION}"
         }
     }
 }
