@@ -44,11 +44,13 @@ pipeline {
                         returnStdout: true
                     ).trim()
 
+                    env.WEB_ROOT = params.WEB_ROOT?.trim() ?: '/var/www/html/cti-firmware'
+                    env.ARTIFACT_SUBDIR = params.ARTIFACT_SUBDIR?.trim() ?: 'releases'
                     env.RELEASE_BRANCH = (env.BRANCH_NAME ?: env.GIT_BRANCH ?: 'local').replaceAll('/', '_')
                     env.RELEASE_VERSION = params.BUILD_VERSION?.trim() ? params.BUILD_VERSION.trim() : "0.0.${env.BUILD_NUMBER}"
                     env.RELEASE_DESCRIPTION = params.DESCRIPTION?.trim() ?: 'No description provided'
-                    env.RELEASE_DIR = "${params.WEB_ROOT.trim()}/${params.ARTIFACT_SUBDIR.trim()}/${env.RELEASE_VERSION}"
-                    env.LATEST_DIR = "${params.WEB_ROOT.trim()}/${params.ARTIFACT_SUBDIR.trim()}/latest"
+                    env.RELEASE_DIR = "${env.WEB_ROOT}/${env.ARTIFACT_SUBDIR}/${env.RELEASE_VERSION}"
+                    env.LATEST_DIR = "${env.WEB_ROOT}/${env.ARTIFACT_SUBDIR}/latest"
                 }
             }
         }
@@ -58,16 +60,16 @@ pipeline {
                 sh '''
                     set -eux
 
-                    mkdir -p "${WEB_ROOT}"
-                    mkdir -p "${WEB_ROOT}/${ARTIFACT_SUBDIR}"
+                    mkdir -p "$WEB_ROOT"
+                    mkdir -p "$WEB_ROOT/$ARTIFACT_SUBDIR"
 
                     ./ci/docker_build.sh \
                         --rebuild-image \
-                        --build-dir "${WORKSPACE}/build-docker" \
-                        --artifact-dir "${WORKSPACE}/docker-artifacts" \
-                        --deploy-dir "${RELEASE_DIR}" \
-                        --description "${RELEASE_DESCRIPTION}" \
-                        --version "${RELEASE_VERSION}"
+                        --build-dir "$WORKSPACE/build-docker" \
+                        --artifact-dir "$WORKSPACE/docker-artifacts" \
+                        --deploy-dir "$RELEASE_DIR" \
+                        --description "$RELEASE_DESCRIPTION" \
+                        --version "$RELEASE_VERSION"
                 '''
             }
         }
@@ -77,49 +79,49 @@ pipeline {
                 sh '''
                     set -eux
 
-                    mkdir -p "${RELEASE_DIR}"
+                    mkdir -p "$RELEASE_DIR"
 
-                    cat > "${RELEASE_DIR}/build-info.txt" <<EOF
-Version: ${RELEASE_VERSION}
-Build Date: ${BUILD_DATE}
-Branch: ${RELEASE_BRANCH}
-Build Number: ${BUILD_NUMBER}
+                    cat > "$RELEASE_DIR/build-info.txt" <<EOF
+Version: $RELEASE_VERSION
+Build Date: $BUILD_DATE
+Branch: $RELEASE_BRANCH
+Build Number: $BUILD_NUMBER
 Description:
-${RELEASE_DESCRIPTION}
+$RELEASE_DESCRIPTION
 EOF
 
-                    cat > "${RELEASE_DIR}/build-info.json" <<EOF
+                    cat > "$RELEASE_DIR/build-info.json" <<EOF
 {
-  "version": "${RELEASE_VERSION}",
-  "buildDate": "${BUILD_DATE}",
-  "branch": "${RELEASE_BRANCH}",
-  "buildNumber": "${BUILD_NUMBER}",
-  "description": "${RELEASE_DESCRIPTION}"
+  "version": "$RELEASE_VERSION",
+  "buildDate": "$BUILD_DATE",
+  "branch": "$RELEASE_BRANCH",
+  "buildNumber": "$BUILD_NUMBER",
+  "description": "$RELEASE_DESCRIPTION"
 }
 EOF
 
-                    cat > "${RELEASE_DIR}/index.html" <<EOF
+                    cat > "$RELEASE_DIR/index.html" <<EOF
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>CTI Firmware ${RELEASE_VERSION}</title>
+    <title>CTI Firmware $RELEASE_VERSION</title>
   </head>
   <body>
     <h1>CTI Firmware Build</h1>
     <ul>
-      <li><strong>Version:</strong> ${RELEASE_VERSION}</li>
-      <li><strong>Build Date:</strong> ${BUILD_DATE}</li>
-      <li><strong>Branch:</strong> ${RELEASE_BRANCH}</li>
-      <li><strong>Build Number:</strong> ${BUILD_NUMBER}</li>
-      <li><strong>Description:</strong> ${RELEASE_DESCRIPTION}</li>
+      <li><strong>Version:</strong> $RELEASE_VERSION</li>
+      <li><strong>Build Date:</strong> $BUILD_DATE</li>
+      <li><strong>Branch:</strong> $RELEASE_BRANCH</li>
+      <li><strong>Build Number:</strong> $BUILD_NUMBER</li>
+      <li><strong>Description:</strong> $RELEASE_DESCRIPTION</li>
     </ul>
     <p>Download the artifacts from this directory.</p>
   </body>
 </html>
 EOF
 
-                    ln -sfn "${RELEASE_VERSION}" "${LATEST_DIR}"
+                    ln -sfn "$RELEASE_VERSION" "$LATEST_DIR"
                 '''
             }
         }
