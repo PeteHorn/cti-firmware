@@ -58,6 +58,7 @@ while [ $# -gt 0 ]; do
       shift
       ;;
     --build-dir)
+      mkdir -p "$2"
       BUILD_DIR_HOST="$(cd "$2" && pwd)"
       shift 2
       ;;
@@ -66,6 +67,7 @@ while [ $# -gt 0 ]; do
       shift 2
       ;;
     --artifact-dir)
+      mkdir -p "$2"
       ARTIFACT_DIR_HOST="$(cd "$2" && pwd)"
       shift 2
       ;;
