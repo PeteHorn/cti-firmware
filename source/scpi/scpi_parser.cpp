@@ -160,26 +160,6 @@ namespace SCPI {
 
         return ParseResult::Success;
     }
-
-    ParseResult ScpiParser::parseString(std::string& value) {
-        consumeWhiteSpace();
-
-        value.clear();
-        while (_paramPos < _bufSize && _buf[_paramPos] != '\n' && _buf[_paramPos] != '\r') {
-            value.push_back(_buf[_paramPos]);
-            _paramPos++;
-        }
-
-        if (value.empty()) {
-            return ParseResult::Invalid;
-        }
-
-        while (_paramPos < _bufSize && (_buf[_paramPos] == '\n' || _buf[_paramPos] == '\r')) {
-            _paramPos++;
-        }
-
-        return ParseResult::Success;
-    }
     
     ParseResult ScpiParser::parseBlock(char** buf, int* len) {
         consumeWhiteSpace();
