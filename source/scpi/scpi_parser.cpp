@@ -209,19 +209,14 @@ namespace SCPI {
         }
 
         size_t start = _paramPos;
-        while (_paramPos < _bufSize && _buf[_paramPos] != '\n' && _buf[_paramPos] != '\r' && _buf[_paramPos] != ',') {
+        while (_paramPos < _bufSize && _buf[_paramPos] != '\n' && _buf[_paramPos] != '\r') {
             _paramPos++;
         }
 
         value.assign(_buf + start, _buf + _paramPos);
 
-        while (_paramPos < _bufSize && (_buf[_paramPos] == '\n' || _buf[_paramPos] == '\r' || _buf[_paramPos] == ',')) {
-            if (_buf[_paramPos] == ',') {
-                _paramPos++;
-            } else {
-                _paramPos++;
-                break;
-            }
+        while (_paramPos < _bufSize && (_buf[_paramPos] == '\n' || _buf[_paramPos] == '\r')) {
+            _paramPos++;
         }
 
         if (value.empty()) {

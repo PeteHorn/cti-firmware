@@ -152,7 +152,9 @@ namespace Visa {
 
         CTI::gLedMatrixRowPins = rows;
         if (!CTI::gLedMatrixColPins.empty()) {
-            CTI::ConfigureLedMatrixPins(CTI::gLedMatrixRowPins, CTI::gLedMatrixColPins);
+            if (!CTI::ConfigureLedMatrixPins(CTI::gLedMatrixRowPins, CTI::gLedMatrixColPins)) {
+                return CommandResult::Error;
+            }
         }
 
         return CommandResult::Success;
@@ -166,7 +168,9 @@ namespace Visa {
 
         CTI::gLedMatrixColPins = cols;
         if (!CTI::gLedMatrixRowPins.empty()) {
-            CTI::ConfigureLedMatrixPins(CTI::gLedMatrixRowPins, CTI::gLedMatrixColPins);
+            if (!CTI::ConfigureLedMatrixPins(CTI::gLedMatrixRowPins, CTI::gLedMatrixColPins)) {
+                return CommandResult::Error;
+            }
         }
 
         return CommandResult::Success;
