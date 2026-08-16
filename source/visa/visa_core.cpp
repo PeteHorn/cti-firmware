@@ -34,6 +34,65 @@ namespace Visa {
         return CommandResult::Success;
     }
 
+    ScpiChoice ledModeOptions[] = {
+        { "OFF", 0 },
+        { "MATRIX", 1 },
+        EndScpiChoice
+    };
+
+    CommandResult scpi_ledMode(ScpiParser* scpi) {
+        int32_t choice;
+        if (scpi->parseChoice(ledModeOptions, choice) != ParseResult::Success) {
+            return CommandResult::MissingParam;
+        }
+
+        CTI::SetLedMatrixEnabled(choice == 1);
+        return CommandResult::Success;
+    }
+
+    CommandResult scpi_ledRows(ScpiParser* scpi) {
+        std::string pinText;
+        if (scpi->parseString(pinText) != ParseResult::Success) {
+            return CommandResult::MissingParam;
+        }
+
+        if (pinText.empty()) {
+            return CommandResult::MissingParam;
+        }
+
+        if (CTI::gMatrixCols.empty()) {
+            return CTI::InitLedMatrix(pinText, "") ? CommandResult::Success : CommandResult::Error;
+        }
+
+        return CTI::InitLedMatrix(pinText, CTI::gPendingColPins.empty() ? "" : CTI::gPendingColPins) ? CommandResult::Success : CommandResult::Error;
+    }
+
+    CommandResult scpi_ledCols(ScpiParser* scpi) {
+        std::string pinText;
+        if (scpi->parseString(pinText) != ParseResult::Success) {
+            return CommandResult::MissingParam;
+        }
+
+        if (pinText.empty()) {
+            return CommandResult::MissingParam;
+        }
+
+        if (CTI::gMatrixRows.empty()) {
+            return CTI::InitLedMatrix("", pinText) ? CommandResult::Success : CommandResult::Error;
+        }
+
+        return CTI::InitLedMatrix(CTI::gPendingRowPins.empty() ? "" : CTI::gPendingRowPins, pinText) ? CommandResult::Success : CommandResult::Error;
+    }
+
+    CommandResult scpi_ledFrame(ScpiParser* scpi) {
+        std::string frameText;
+        if (scpi->parseString(frameText) != ParseResult::Success) {
+            return CommandResult::MissingParam;
+        }
+
+        return CTI::SetLedMatrixFrame(frameText) ? CommandResult::Success : CommandResult::Error;
+    }
+
     ScpiChoice statusSource[] = {
         { "COMMS", 0 },
         { "USER",  1 },
@@ -161,6 +220,11 @@ namespace Visa {
         // SET:LED is a common command as gPlatform has a status LED abstraction
         visa->addCommand("STATus:USER", scpi_LED, nullptr);
         visa->addCommand("STATus:SOURce", scpi_cmdStatusSource, scpi_queryStatusSource);
+
+        visa->addCommand("LED:MODE", scpi_ledMode, nullptr);
+        visa->addCommand("LED:ROWS", scpi_ledRows, nullptr);
+        visa->addCommand("LED:COLS", scpi_ledCols, nullptr);
+        visa->addCommand("LED:FRAME", scpi_ledFrame, nullptr);
     }
 
     Visa::Visa():

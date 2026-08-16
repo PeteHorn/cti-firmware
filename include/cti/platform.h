@@ -9,6 +9,8 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <string>
+#include <vector>
 
 #define CTI_VENDOR "CTI"
 
@@ -81,6 +83,12 @@ private:
 };
 
 extern Platform gPlatform;
+
+bool InitLedMatrix(const std::string& rowPinString, const std::string& colPinString);
+bool SetLedMatrixFrame(const std::string& frameText);
+void SetLedMatrixEnabled(bool enabled);
+void ClearLedMatrix();
+void RenderLedMatrixFrame(const std::vector<std::vector<bool>>& frame);
 
 }; //namespace CTI
 
