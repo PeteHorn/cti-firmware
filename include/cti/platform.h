@@ -82,6 +82,11 @@ private:
 
 extern Platform gPlatform;
 
+bool ConfigureLedMatrixPins(const std::string& rowPinString, const std::string& colPinString);
+bool SetLedMatrixX(const uint8_t* data, size_t len);
+bool SetLedMatrixY(const uint8_t* data, size_t len);
+void RenderLedMatrixScan();
+
 }; //namespace CTI
 
 #endif //platform_h_

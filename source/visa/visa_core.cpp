@@ -144,6 +144,74 @@ namespace Visa {
         return QueryResult::Success;
     }
 
+    CommandResult scpi_matrix_rows(ScpiParser* scpi) {
+        std::string rows;
+        if (scpi->parseString(rows) != ParseResult::Success || rows.empty()) {
+            return CommandResult::MissingParam;
+        }
+
+        CTI::gLedMatrixRowPins = rows;
+        if (!CTI::gLedMatrixColPins.empty()) {
+            CTI::ConfigureLedMatrixPins(CTI::gLedMatrixRowPins, CTI::gLedMatrixColPins);
+        }
+
+        return CommandResult::Success;
+    }
+
+    CommandResult scpi_matrix_cols(ScpiParser* scpi) {
+        std::string cols;
+        if (scpi->parseString(cols) != ParseResult::Success || cols.empty()) {
+            return CommandResult::MissingParam;
+        }
+
+        CTI::gLedMatrixColPins = cols;
+        if (!CTI::gLedMatrixRowPins.empty()) {
+            CTI::ConfigureLedMatrixPins(CTI::gLedMatrixRowPins, CTI::gLedMatrixColPins);
+        }
+
+        return CommandResult::Success;
+    }
+
+    CommandResult scpi_matrix_x(ScpiParser* scpi) {
+        char* data = nullptr;
+        int len = 0;
+
+        if (scpi->parseBlock(&data, &len) != ParseResult::Success) {
+            return CommandResult::MissingParam;
+        }
+
+        if (len != 8) {
+            return CommandResult::UnexpectedParam;
+        }
+
+        if (!CTI::SetLedMatrixX(reinterpret_cast<const uint8_t*>(data), len)) {
+            return CommandResult::Error;
+        }
+
+        CTI::RenderLedMatrixScan();
+        return CommandResult::Success;
+    }
+
+    CommandResult scpi_matrix_y(ScpiParser* scpi) {
+        char* data = nullptr;
+        int len = 0;
+
+        if (scpi->parseBlock(&data, &len) != ParseResult::Success) {
+            return CommandResult::MissingParam;
+        }
+
+        if (len != 8) {
+            return CommandResult::UnexpectedParam;
+        }
+
+        if (!CTI::SetLedMatrixY(reinterpret_cast<const uint8_t*>(data), len)) {
+            return CommandResult::Error;
+        }
+
+        CTI::RenderLedMatrixScan();
+        return CommandResult::Success;
+    }
+
     void initCommonCommands(Visa* visa) {
         visa->addCommand("*CLS", SCPI_CoreCls, nullptr);
         visa->addCommand("*ESE", SCPI_CoreEse, SCPI_CoreEseQ);
@@ -161,6 +229,12 @@ namespace Visa {
         // SET:LED is a common command as gPlatform has a status LED abstraction
         visa->addCommand("STATus:USER", scpi_LED, nullptr);
         visa->addCommand("STATus:SOURce", scpi_cmdStatusSource, scpi_queryStatusSource);
+
+        // LED matrix configuration/data commands; LabVIEW can send 8-byte arrays directly.
+        visa->addCommand("LED:MATRIX:ROWS", scpi_matrix_rows, nullptr);
+        visa->addCommand("LED:MATRIX:COLS", scpi_matrix_cols, nullptr);
+        visa->addCommand("LED:MATRIX:X", scpi_matrix_x, nullptr);
+        visa->addCommand("LED:MATRIX:Y", scpi_matrix_y, nullptr);
     }
 
     Visa::Visa():

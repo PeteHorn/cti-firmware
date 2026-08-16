@@ -5,6 +5,7 @@
 
 #include <cstdint>
 #include <cstdlib>
+#include <string>
 #include <vector>
 
 #ifndef SCPI_ERROR_QUEUE_SIZE
@@ -239,6 +240,7 @@ namespace SCPI {
 
         ParseResult parseBool(bool& value);
         ParseResult parseBlock(char** buf, int* len);
+        ParseResult parseString(std::string& value);
         ParseResult parseChoice(const ScpiChoice* choices, int32_t& value);
 
         ParseResult parseInt(uint8_t& value) {

@@ -200,6 +200,36 @@ namespace SCPI {
 
         return ParseResult::Success;
     }
+
+    ParseResult ScpiParser::parseString(std::string& value) {
+        consumeWhiteSpace();
+
+        if (_paramPos >= _bufSize) {
+            return ParseResult::EndOfData;
+        }
+
+        size_t start = _paramPos;
+        while (_paramPos < _bufSize && _buf[_paramPos] != '\n' && _buf[_paramPos] != '\r' && _buf[_paramPos] != ',') {
+            _paramPos++;
+        }
+
+        value.assign(_buf + start, _buf + _paramPos);
+
+        while (_paramPos < _bufSize && (_buf[_paramPos] == '\n' || _buf[_paramPos] == '\r' || _buf[_paramPos] == ',')) {
+            if (_buf[_paramPos] == ',') {
+                _paramPos++;
+            } else {
+                _paramPos++;
+                break;
+            }
+        }
+
+        if (value.empty()) {
+            return ParseResult::Invalid;
+        }
+
+        return ParseResult::Success;
+    }
     
 
     ParserStatus ScpiParser::parseNode() {
