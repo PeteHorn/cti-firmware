@@ -303,7 +303,22 @@ cp -v "$BUILD_DIR_HOST"/*.elf "$ARTIFACT_DIR_HOST/" 2>/dev/null || true
 pushd "$ARTIFACT_DIR_HOST" >/dev/null
 ZIP_NAME="cti-${VERSION}.zip"
 rm -f "$ZIP_NAME"
-zip -r "$ZIP_NAME" ./* >/dev/null
+if command -v zip >/dev/null 2>&1; then
+  zip -r "$ZIP_NAME" ./* >/dev/null
+else
+  python3 - <<'PY'
+import os
+import zipfile
+
+base = os.getcwd()
+zip_name = f"cti-{os.environ.get('VERSION', 'build')}.zip"
+with zipfile.ZipFile(zip_name, 'w', compression=zipfile.ZIP_DEFLATED) as zf:
+    for name in sorted(os.listdir(base)):
+        full = os.path.join(base, name)
+        if os.path.isfile(full):
+            zf.write(full, arcname=name)
+PY
+fi
 popd >/dev/null
 
 if [ -n "$DEPLOY_DIR_HOST" ]; then
