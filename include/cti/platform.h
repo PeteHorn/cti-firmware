@@ -9,6 +9,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <string>
 
 #define CTI_VENDOR "CTI"
 
