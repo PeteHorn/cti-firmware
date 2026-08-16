@@ -84,6 +84,14 @@ private:
 
 extern Platform gPlatform;
 
+extern std::vector<int> gMatrixRows;
+extern std::vector<int> gMatrixCols;
+extern bool gMatrixEnabled;
+extern size_t gMatrixRowsCount;
+extern size_t gMatrixColsCount;
+extern std::string gPendingRowPins;
+extern std::string gPendingColPins;
+
 bool InitLedMatrix(const std::string& rowPinString, const std::string& colPinString);
 bool SetLedMatrixFrame(const std::string& frameText);
 void SetLedMatrixEnabled(bool enabled);

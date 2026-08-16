@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <cstdlib>
 #include <string>
 #include <sstream>
 #include <vector>
@@ -53,10 +54,21 @@ std::vector<int> parsePinString(const std::string& pinText) {
             normalized = normalized.substr(4);
         }
 
-        try {
-            pins.push_back(std::stoi(normalized));
-        } catch (...) {
-            // Ignore malformed entries so the matrix configuration can be tuned in code.
+        // Parse integer-like pin names without exceptions, since Pico builds disable C++ exceptions.
+        bool valid = true;
+        if (normalized.empty()) {
+            valid = false;
+        }
+
+        for (char ch : normalized) {
+            if (ch < '0' || ch > '9') {
+                valid = false;
+                break;
+            }
+        }
+
+        if (valid) {
+            pins.push_back(static_cast<int>(std::strtol(normalized.c_str(), nullptr, 10)));
         }
     }
 
@@ -85,10 +97,10 @@ bool InitLedMatrix(const std::string& rowPinString, const std::string& colPinStr
         return false;
     }
 
-    return InitLedMatrix(rowPinString, colPinString, rowPins.size(), colPins.size());
+    return InitLedMatrixImpl(rowPinString, colPinString, rowPins.size(), colPins.size());
 }
 
-bool InitLedMatrix(const std::string& rowPinString, const std::string& colPinString, size_t rows, size_t cols) {
+bool InitLedMatrixImpl(const std::string& rowPinString, const std::string& colPinString, size_t rows, size_t cols) {
     const std::vector<int> rowPins = parsePinString(rowPinString);
     const std::vector<int> colPins = parsePinString(colPinString);
 
