@@ -292,7 +292,7 @@ fi
   -w /workspace \
   --entrypoint /bin/bash \
   "$IMAGE_NAME" \
-  -lc "mkdir -p '$BUILD_DIR_CONTAINER' '$ARTIFACT_DIR_CONTAINER' && cmake -S . -B '$BUILD_DIR_CONTAINER' -DCMAKE_BUILD_TYPE=Release -G Ninja && cmake --build '$BUILD_DIR_CONTAINER' -- -j\"\$(nproc)\""
+  -lc "rm -rf '$BUILD_DIR_CONTAINER' && mkdir -p '$BUILD_DIR_CONTAINER' '$ARTIFACT_DIR_CONTAINER' && cmake -S . -B '$BUILD_DIR_CONTAINER' -DCMAKE_BUILD_TYPE=Release -DPICO_BOARD=pico -G Ninja && cmake --build '$BUILD_DIR_CONTAINER' -- -j\"\$(nproc)\""
 
 # Collect firmware artifacts from the build output into the host artifact folder.
 cp -v "$BUILD_DIR_HOST"/*.uf2 "$ARTIFACT_DIR_HOST/" 2>/dev/null || true

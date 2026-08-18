@@ -3,11 +3,6 @@ pipeline {
 
     parameters {
         string(
-            name: 'GIT_REF',
-            defaultValue: '',
-            description: 'Git branch, tag, or commit hash to build. Leave blank to use the branch that triggered this build.'
-        )
-        string(
             name: 'BUILD_VERSION',
             defaultValue: '',
             description: 'Version folder name to create, for example 1.2.3. Leave blank to use the Jenkins build number.'
@@ -41,23 +36,6 @@ pipeline {
     }
 
     stages {
-        stage('Declarative: Checkout SCM') {
-            steps {
-                script {
-                    if (params.GIT_REF?.trim()) {
-                        echo "Checking out git ref: ${params.GIT_REF}"
-                        checkout([
-                            $class: 'GitSCM',
-                            branches: [[name: params.GIT_REF]],
-                            userRemoteConfigs: [[url: 'https://github.com/PeteHorn/cti-firmware.git']]
-                        ])
-                    } else {
-                        checkout scm
-                    }
-                }
-            }
-        }
-        
         stage('Prepare release metadata') {
             steps {
                 script {
