@@ -28,8 +28,23 @@ static uint8_t gLedMatrixBus = 0;
 static uint8_t gLedMatrixAddr = LED_MATRIX_DEFAULT_ADDR;
 static bool gLedMatrixReady = false;
 
-// Display RAM mirror: even bytes drive ROW0-7 (left panel), odd bytes ROW8-15 (right panel).
+// Display RAM mirror: even bytes are the left panel (ROW0-7), odd bytes the right panel (ROW8-15).
 static std::array<uint8_t, 2 * LED_MATRIX_SIZE> gLedMatrixRam = {};
+
+// Matches Freenove_VK16K33::setRow/setPixel: RAM byte c holds bit (7-c) of every source row.
+static void packPanel(const uint8_t* src, size_t byteOffset) {
+    for (size_t c = 0; c < LED_MATRIX_SIZE; ++c) {
+        uint8_t packed = 0;
+
+        for (size_t r = 0; r < LED_MATRIX_SIZE; ++r) {
+            if (src[r] & (1u << (7 - c))) {
+                packed |= (1u << r);
+            }
+        }
+
+        gLedMatrixRam[2 * c + byteOffset] = packed;
+    }
+}
 
 static bool ledMatrixCommand(uint8_t cmd) {
     return gPlatform.I2C.write(gLedMatrixBus, gLedMatrixAddr, 1, &cmd) == 1;
@@ -44,7 +59,7 @@ bool LedMatrixInit(uint8_t bus, uint8_t sclPin, uint8_t sdaPin, uint8_t addr, ui
         brightness = 15;
     }
 
-    gPlatform.I2C.init(bus, 400000, sclPin, sdaPin);
+    gPlatform.I2C.init(bus, 100000, sclPin, sdaPin);
 
     if (!ledMatrixCommand(HT16K33_SYSTEM_ON)) {
         return false;
@@ -53,11 +68,11 @@ bool LedMatrixInit(uint8_t bus, uint8_t sclPin, uint8_t sdaPin, uint8_t addr, ui
     // Oscillator needs a moment before the display driver accepts setup.
     gPlatform.Timer.SleepMilliseconds(1);
 
-    if (!ledMatrixCommand(HT16K33_BRIGHTNESS | brightness)) {
+    if (!ledMatrixCommand(HT16K33_DISPLAY_ON)) {
         return false;
     }
 
-    if (!ledMatrixCommand(HT16K33_DISPLAY_ON)) {
+    if (!ledMatrixCommand(HT16K33_BRIGHTNESS | brightness)) {
         return false;
     }
 
@@ -84,9 +99,7 @@ bool SetLedMatrixX(const uint8_t* data, size_t len) {
         return false;
     }
 
-    for (size_t i = 0; i < LED_MATRIX_SIZE; ++i) {
-        gLedMatrixRam[2 * i] = data[i];
-    }
+    packPanel(data, 0);
 
     return LedMatrixRefresh();
 }
@@ -96,9 +109,7 @@ bool SetLedMatrixY(const uint8_t* data, size_t len) {
         return false;
     }
 
-    for (size_t i = 0; i < LED_MATRIX_SIZE; ++i) {
-        gLedMatrixRam[2 * i + 1] = data[i];
-    }
+    packPanel(data, 1);
 
     return LedMatrixRefresh();
 }
