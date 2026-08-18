@@ -25,7 +25,7 @@ if (EXISTS ${picoVscode})
     include(${picoVscode})
 endif()
 # ====================================================================================
-set(PICO_BOARD pico_w CACHE STRING "Board type")
+set(PICO_BOARD pico CACHE STRING "Board type")
 
 message("\n-- Including Pico SDK from ${PICO_SDK_PATH} --")
 
