@@ -144,33 +144,30 @@ namespace Visa {
         return QueryResult::Success;
     }
 
-    CommandResult scpi_matrix_rows(ScpiParser* scpi) {
-        std::string rows;
-        if (scpi->parseString(rows) != ParseResult::Success || rows.empty()) {
+    CommandResult scpi_matrix_init(ScpiParser* scpi) {
+        uint8_t bus;
+        uint8_t sclPin;
+        uint8_t sdaPin;
+        uint8_t addr = CTI::LED_MATRIX_DEFAULT_ADDR;
+        uint8_t brightness = 15;
+
+        if (scpi->parseInt(bus) != ParseResult::Success) {
             return CommandResult::MissingParam;
         }
 
-        CTI::gLedMatrixRowPins = rows;
-        if (!CTI::gLedMatrixColPins.empty()) {
-            if (!CTI::ConfigureLedMatrixPins(CTI::gLedMatrixRowPins, CTI::gLedMatrixColPins)) {
-                return CommandResult::Error;
-            }
-        }
-
-        return CommandResult::Success;
-    }
-
-    CommandResult scpi_matrix_cols(ScpiParser* scpi) {
-        std::string cols;
-        if (scpi->parseString(cols) != ParseResult::Success || cols.empty()) {
+        if (scpi->parseInt(sclPin) != ParseResult::Success) {
             return CommandResult::MissingParam;
         }
 
-        CTI::gLedMatrixColPins = cols;
-        if (!CTI::gLedMatrixRowPins.empty()) {
-            if (!CTI::ConfigureLedMatrixPins(CTI::gLedMatrixRowPins, CTI::gLedMatrixColPins)) {
-                return CommandResult::Error;
-            }
+        if (scpi->parseInt(sdaPin) != ParseResult::Success) {
+            return CommandResult::MissingParam;
+        }
+
+        scpi->parseInt(addr);        // optional, defaults to 0x71
+        scpi->parseInt(brightness);  // optional, 0-15
+
+        if (!CTI::LedMatrixInit(bus, sclPin, sdaPin, addr, brightness)) {
+            return CommandResult::Error;
         }
 
         return CommandResult::Success;
@@ -192,7 +189,6 @@ namespace Visa {
             return CommandResult::Error;
         }
 
-        CTI::RenderLedMatrixScan();
         return CommandResult::Success;
     }
 
@@ -212,7 +208,6 @@ namespace Visa {
             return CommandResult::Error;
         }
 
-        CTI::RenderLedMatrixScan();
         return CommandResult::Success;
     }
 
@@ -234,9 +229,8 @@ namespace Visa {
         visa->addCommand("STATus:USER", scpi_LED, nullptr);
         visa->addCommand("STATus:SOURce", scpi_cmdStatusSource, scpi_queryStatusSource);
 
-        // LED matrix configuration/data commands; LabVIEW can send 8-byte arrays directly.
-        visa->addCommand("LED:MATRIX:ROWS", scpi_matrix_rows, nullptr);
-        visa->addCommand("LED:MATRIX:COLS", scpi_matrix_cols, nullptr);
+        // HT16K33 LED matrix; LabVIEW can send 8-byte arrays directly.
+        visa->addCommand("LED:MATRIX:INIT", scpi_matrix_init, nullptr);
         visa->addCommand("LED:MATRIX:X", scpi_matrix_x, nullptr);
         visa->addCommand("LED:MATRIX:Y", scpi_matrix_y, nullptr);
     }

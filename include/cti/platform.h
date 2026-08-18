@@ -83,13 +83,13 @@ private:
 
 extern Platform gPlatform;
 
-extern std::string gLedMatrixRowPins;
-extern std::string gLedMatrixColPins;
+// HT16K33/VK16K33 backed 2x(8x8) LED matrix, as used by the Freenove 4WD Pico car.
+static const uint8_t LED_MATRIX_DEFAULT_ADDR = 0x71;
 
-bool ConfigureLedMatrixPins(const std::string& rowPinString, const std::string& colPinString);
+bool LedMatrixInit(uint8_t bus, uint8_t sclPin, uint8_t sdaPin, uint8_t addr, uint8_t brightness);
 bool SetLedMatrixX(const uint8_t* data, size_t len);
 bool SetLedMatrixY(const uint8_t* data, size_t len);
-void RenderLedMatrixScan();
+bool LedMatrixRefresh();
 
 }; //namespace CTI
 

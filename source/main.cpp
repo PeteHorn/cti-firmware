@@ -1,13 +1,6 @@
 #include <stdio.h>
 #include <array>
-#include <cstdlib>
 #include <cstring>
-#include <sstream>
-#include <string>
-#include <vector>
-
-#include <pico/stdlib.h>
-#include <hardware/gpio.h>
 
 #ifdef CTI_VISA
     #include "visa.h"
@@ -26,83 +19,64 @@ namespace CTI {
 
 static const size_t LED_MATRIX_SIZE = 8;
 
-std::vector<int> gLedMatrixRows;
-std::vector<int> gLedMatrixCols;
-std::string gLedMatrixRowPins;
-std::string gLedMatrixColPins;
-std::array<uint8_t, LED_MATRIX_SIZE> gLedMatrixX = {};
-std::array<uint8_t, LED_MATRIX_SIZE> gLedMatrixY = {};
-bool gLedMatrixReady = false;
+// HT16K33 command opcodes.
+static const uint8_t HT16K33_SYSTEM_ON = 0x21;
+static const uint8_t HT16K33_DISPLAY_ON = 0x81; // display on, blink off
+static const uint8_t HT16K33_BRIGHTNESS = 0xE0;
 
-std::vector<int> parsePinList(const std::string& pinText) {
-    std::vector<int> pins;
-    std::stringstream stream(pinText);
-    std::string token;
+static uint8_t gLedMatrixBus = 0;
+static uint8_t gLedMatrixAddr = LED_MATRIX_DEFAULT_ADDR;
+static bool gLedMatrixReady = false;
 
-    while (std::getline(stream, token, ',')) {
-        const auto first = token.find_first_not_of(" \t\r\n");
-        if (first == std::string::npos) {
-            continue;
-        }
+// Display RAM mirror: even bytes drive ROW0-7 (left panel), odd bytes ROW8-15 (right panel).
+static std::array<uint8_t, 2 * LED_MATRIX_SIZE> gLedMatrixRam = {};
 
-        const auto last = token.find_last_not_of(" \t\r\n");
-        token = token.substr(first, last - first + 1);
-
-        if (token.empty()) {
-            continue;
-        }
-
-        std::string normalized = token;
-        if (normalized.size() > 2 && normalized[0] == 'G' && normalized[1] == 'P') {
-            normalized = normalized.substr(2);
-        }
-        if (normalized.size() > 2 && normalized[0] == 'g' && normalized[1] == 'p') {
-            normalized = normalized.substr(2);
-        }
-        if (normalized.size() > 4 && normalized[0] == 'G' && normalized[1] == 'P' && normalized[2] == 'I' && normalized[3] == 'O') {
-            normalized = normalized.substr(4);
-        }
-        if (normalized.size() > 4 && normalized[0] == 'g' && normalized[1] == 'p' && normalized[2] == 'i' && normalized[3] == 'o') {
-            normalized = normalized.substr(4);
-        }
-
-        char* end = nullptr;
-        long value = std::strtol(normalized.c_str(), &end, 10);
-        if (end != nullptr && *end == '\0') {
-            pins.push_back(static_cast<int>(value));
-        }
-    }
-
-    return pins;
+static bool ledMatrixCommand(uint8_t cmd) {
+    return gPlatform.I2C.write(gLedMatrixBus, gLedMatrixAddr, 1, &cmd) == 1;
 }
 
-bool ConfigureLedMatrixPins(const std::string& rowPinString, const std::string& colPinString) {
-    std::vector<int> rowPins = parsePinList(rowPinString);
-    std::vector<int> colPins = parsePinList(colPinString);
+bool LedMatrixInit(uint8_t bus, uint8_t sclPin, uint8_t sdaPin, uint8_t addr, uint8_t brightness) {
+    gLedMatrixBus = bus;
+    gLedMatrixAddr = addr;
+    gLedMatrixReady = false;
 
-    if (rowPins.size() != LED_MATRIX_SIZE || colPins.size() != LED_MATRIX_SIZE) {
+    if (brightness > 15) {
+        brightness = 15;
+    }
+
+    gPlatform.I2C.init(bus, 400000, sclPin, sdaPin);
+
+    if (!ledMatrixCommand(HT16K33_SYSTEM_ON)) {
         return false;
     }
 
-    for (int pin : rowPins) {
-        gpio_init(pin);
-        gpio_set_dir(pin, GPIO_OUT);
-        gpio_put(pin, 0);
+    // Oscillator needs a moment before the display driver accepts setup.
+    gPlatform.Timer.SleepMilliseconds(1);
+
+    if (!ledMatrixCommand(HT16K33_BRIGHTNESS | brightness)) {
+        return false;
     }
 
-    for (int pin : colPins) {
-        gpio_init(pin);
-        gpio_set_dir(pin, GPIO_OUT);
-        gpio_put(pin, 0);
+    if (!ledMatrixCommand(HT16K33_DISPLAY_ON)) {
+        return false;
     }
 
-    gLedMatrixRows = rowPins;
-    gLedMatrixCols = colPins;
-    gLedMatrixRowPins = rowPinString;
-    gLedMatrixColPins = colPinString;
     gLedMatrixReady = true;
+    gLedMatrixRam.fill(0);
 
-    return true;
+    return LedMatrixRefresh();
+}
+
+bool LedMatrixRefresh() {
+    if (!gLedMatrixReady) {
+        return false;
+    }
+
+    uint8_t frame[1 + gLedMatrixRam.size()];
+    frame[0] = 0x00; // display RAM start address
+    std::memcpy(&frame[1], gLedMatrixRam.data(), gLedMatrixRam.size());
+
+    return gPlatform.I2C.write(gLedMatrixBus, gLedMatrixAddr, sizeof(frame), frame) == sizeof(frame);
 }
 
 bool SetLedMatrixX(const uint8_t* data, size_t len) {
@@ -110,8 +84,11 @@ bool SetLedMatrixX(const uint8_t* data, size_t len) {
         return false;
     }
 
-    std::memcpy(gLedMatrixX.data(), data, len);
-    return true;
+    for (size_t i = 0; i < LED_MATRIX_SIZE; ++i) {
+        gLedMatrixRam[2 * i] = data[i];
+    }
+
+    return LedMatrixRefresh();
 }
 
 bool SetLedMatrixY(const uint8_t* data, size_t len) {
@@ -119,31 +96,11 @@ bool SetLedMatrixY(const uint8_t* data, size_t len) {
         return false;
     }
 
-    std::memcpy(gLedMatrixY.data(), data, len);
-    return true;
-}
-
-void RenderLedMatrixScan() {
-    if (!gLedMatrixReady || gLedMatrixRows.size() != LED_MATRIX_SIZE || gLedMatrixCols.size() != LED_MATRIX_SIZE) {
-        return;
+    for (size_t i = 0; i < LED_MATRIX_SIZE; ++i) {
+        gLedMatrixRam[2 * i + 1] = data[i];
     }
 
-    for (size_t row = 0; row < LED_MATRIX_SIZE; ++row) {
-        for (size_t col = 0; col < LED_MATRIX_SIZE; ++col) {
-            gpio_put(gLedMatrixCols[col], 0);
-        }
-
-        gpio_put(gLedMatrixRows[row], 0);
-
-        for (size_t col = 0; col < LED_MATRIX_SIZE; ++col) {
-            bool on = (gLedMatrixY[row] & (1u << col)) != 0;
-            gpio_put(gLedMatrixCols[col], on ? 1 : 0);
-        }
-
-        gpio_put(gLedMatrixRows[row], 1);
-        sleep_us(800);
-        gpio_put(gLedMatrixRows[row], 0);
-    }
+    return LedMatrixRefresh();
 }
 
 } // namespace CTI
